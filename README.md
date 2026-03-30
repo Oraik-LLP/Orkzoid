@@ -1,4 +1,4 @@
-# 🛡️ Orkzoid — Autonomous Security Platform
+# Orkzoid — Autonomous Security Platform
 
 > **Proactive Threat Intelligence & Shadow API Attack Surface Management**
 
@@ -6,7 +6,7 @@ Orkzoid is a Python-based autonomous security platform consisting of two product
 
 ---
 
-## 📦 Products
+## Products
 
 ### Product 1 — Proactive Threat Intelligence & Automated Incident Response
 
@@ -52,7 +52,7 @@ python product2_shadow_api/orkzoid_api.py --target example.com --spec openapi.js
 
 ---
 
-## 🚀 Installation
+## Installation
 
 ### Prerequisites
 - Python 3.10+
@@ -70,7 +70,7 @@ pip install -r requirements.txt
 
 ---
 
-## 🔧 Usage
+## Usage
 
 ### Product 1 — Threat Intelligence
 
@@ -109,7 +109,7 @@ python product2_shadow_api/orkzoid_api.py --target example.com --timeout 3 --out
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 Orkzoid/
@@ -136,7 +136,7 @@ Orkzoid/
 
 ---
 
-## 📋 Dependencies
+## Dependencies
 
 | Package | Purpose |
 |---------|---------|
@@ -150,12 +150,12 @@ Orkzoid/
 
 ---
 
-## ⚠️ Legal Disclaimer
+## Legal Disclaimer
 
 **Orkzoid is intended for authorized security testing only.** Always obtain proper authorization before scanning any target. Unauthorized scanning of networks and APIs may violate local, state, and federal laws. The authors are not responsible for misuse of this tool.
 
 ---
 
-## 📜 License
+## License
 
 MIT License — See [LICENSE](LICENSE) for details.
