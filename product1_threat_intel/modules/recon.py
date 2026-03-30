@@ -5,6 +5,9 @@ Uses python-nmap to perform port scanning, service detection,
 and OS fingerprinting on target IPs or CIDR ranges.
 """
 
+import os
+import sys
+import platform
 import nmap
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TimeElapsedColumn
@@ -26,6 +29,18 @@ class ReconScanner:
         self.scanner = nmap.PortScanner()
         self.results = []
 
+    @staticmethod
+    def _is_privileged() -> bool:
+        """Check if the current user has root/admin privileges."""
+        if platform.system() == "Windows":
+            try:
+                import ctypes
+                return ctypes.windll.shell32.IsUserAnAdmin() != 0
+            except Exception:
+                return False
+        else:
+            return os.geteuid() == 0
+
     def scan(self, target: str) -> list[dict]:
         """
         Perform an nmap scan on the given target (IP or CIDR).
@@ -38,21 +53,29 @@ class ReconScanner:
         """
         self.results = []
 
+        # Check privileges and select scan type accordingly
+        privileged = self._is_privileged()
+        if privileged:
+            # Full SYN scan + scripts (requires root/admin)
+            nmap_args = f"-sV -sC -T4 --host-timeout {self.timeout * 20}s"
+            scan_mode = "Privileged (SYN + Scripts)"
+        else:
+            # Fallback to TCP connect scan (no root needed)
+            nmap_args = f"-sT -sV -T4 --host-timeout {self.timeout * 20}s"
+            scan_mode = "Unprivileged (TCP Connect)"
+            console.print(
+                "[yellow]⚠ Not running as root/admin. Using TCP connect scan (-sT) instead of SYN scan.[/yellow]\n"
+                "[dim]  For full results (SYN scan + NSE scripts), run with: sudo python orkzoid_threat.py ...[/dim]"
+            )
+
         console.print(
             Panel(
-                f"[bold cyan]🔍 Scanning target:[/bold cyan] [white]{target}[/white]\n"
-                f"[dim]Timeout: {self.timeout}s | Detection: Service + Version[/dim]",
+                f"[bold cyan]Scanning target:[/bold cyan] [white]{target}[/white]\n"
+                f"[dim]Timeout: {self.timeout}s | Mode: {scan_mode}[/dim]",
                 title="[bold green]Orkzoid Recon[/bold green]",
                 border_style="green",
             )
         )
-
-        # nmap arguments:
-        #   -sV  = service/version detection
-        #   -sC  = default scripts
-        #   -T4  = aggressive timing
-        #   --host-timeout = per-host timeout
-        nmap_args = f"-sV -sC -T4 --host-timeout {self.timeout * 20}s"
 
         try:
             with Progress(

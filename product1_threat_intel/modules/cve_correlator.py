@@ -29,15 +29,21 @@ class CVECorrelator:
     using the NVD API v2.0.
     """
 
-    def __init__(self, timeout: int = 5):
+    def __init__(self, timeout: int = 5, api_key: str | None = None):
         self.timeout = timeout
+        self.api_key = api_key
         self.session = requests.Session()
-        self.session.headers.update({
+        headers = {
             "User-Agent": "Orkzoid-ThreatIntel/1.0",
             "Accept": "application/json",
-        })
+        }
+        if api_key:
+            headers["apiKey"] = api_key
+        self.session.headers.update(headers)
         self.cve_results = []
         self._online = True
+        # With API key: ~50 req/30s. Without: ~5 req/30s.
+        self._rate_delay = 0.6 if api_key else NVD_RATE_LIMIT_DELAY
 
     def correlate(self, services: list[dict]) -> list[dict]:
         """
@@ -58,8 +64,9 @@ class CVECorrelator:
 
         console.print(
             Panel(
-                f"[bold cyan]🔗 Correlating {len(services)} service(s) with NVD CVE database[/bold cyan]\n"
-                f"[dim]API: {NVD_API_BASE}[/dim]",
+                f"[bold cyan]Correlating {len(services)} service(s) with NVD CVE database[/bold cyan]\n"
+                f"[dim]API: {NVD_API_BASE}[/dim]\n"
+                f"[dim]API Key: {'Configured (fast mode)' if self.api_key else 'Not set (rate-limited)'}[/dim]",
                 title="[bold magenta]CVE Correlation[/bold magenta]",
                 border_style="magenta",
             )
@@ -138,7 +145,7 @@ class CVECorrelator:
                 cves = self._query_by_keyword(keyword)
 
             # Respect rate limit
-            time.sleep(NVD_RATE_LIMIT_DELAY)
+            time.sleep(self._rate_delay)
 
         except Exception as e:
             console.print(f"[dim red]  ✗ Error fetching CVEs for {service.get('product', 'unknown')}: {e}[/dim red]")

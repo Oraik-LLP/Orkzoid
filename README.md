@@ -76,40 +76,43 @@ pip install -r requirements.txt
 
 ## Usage
 
-### Product 1 — Threat Intelligence
+### Unified CLI (Recommended)
 
 ```bash
-# Scan a single IP
-python product1_threat_intel/orkzoid_threat.py --target 10.0.0.1
+# Threat Intelligence scan
+python orkzoid.py --mode threat --target 192.168.1.1
 
-# Scan a CIDR range with custom timeout
-python product1_threat_intel/orkzoid_threat.py --target 192.168.1.0/24 --timeout 10
+# Shadow API scan
+python orkzoid.py --mode api --target example.com --spec openapi.json
 
-# Save output to a specific file
-python product1_threat_intel/orkzoid_threat.py --target 10.0.0.1 --output my_report.md
+# With NVD API key for faster CVE lookups
+python orkzoid.py --mode threat --target 10.0.0.0/24 --api-key YOUR_KEY
 ```
 
-### Product 2 — Shadow API Scanner
+### Direct Product Scripts
 
 ```bash
-# Discover and audit APIs on a domain
+# Product 1 — Threat Intelligence
+python product1_threat_intel/orkzoid_threat.py --target 10.0.0.1
+python product1_threat_intel/orkzoid_threat.py --target 192.168.1.0/24 --timeout 10 --api-key YOUR_KEY
+
+# Product 2 — Shadow API Scanner
 python product2_shadow_api/orkzoid_api.py --target example.com
-
-# Compare against OpenAPI spec
-python product2_shadow_api/orkzoid_api.py --target example.com --spec openapi.json
-
-# Custom wordlist and timeout
-python product2_shadow_api/orkzoid_api.py --target example.com --timeout 3 --output api_report.md
+python product2_shadow_api/orkzoid_api.py --target example.com --spec openapi.json --output api_report
 ```
 
 ### Common Flags
 
 | Flag | Description | Default |
 |------|-------------|---------|
+| `--mode` | `threat` or `api` (unified CLI only) | *Required* |
 | `--target` | Target IP, CIDR, or domain | *Required* |
 | `--timeout` | Network operation timeout (seconds) | `5` |
 | `--output` | Output report filename | Auto-generated |
-| `--spec` | OpenAPI/Swagger spec file (Product 2 only) | `None` |
+| `--api-key` | NVD API key for faster CVE lookups (threat mode) | `None` |
+| `--spec` | OpenAPI/Swagger spec file (api mode only) | `None` |
+
+> **Note:** Product 1 (Threat Intel) uses nmap. For full SYN scan + NSE scripts, run with `sudo`/admin. Without root, it automatically falls back to TCP connect scan.
 
 ---
 

@@ -10,6 +10,7 @@ Discovers API endpoints through multiple techniques:
 
 import re
 import os
+import time
 import requests
 from urllib.parse import urljoin, urlparse
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -180,8 +181,8 @@ class APIDiscoverer:
         ) as progress:
             task = progress.add_task("[cyan]Brute-forcing paths...", total=len(self.wordlist))
 
-            # Use thread pool for concurrent requests
-            with ThreadPoolExecutor(max_workers=10) as executor:
+            # Use thread pool for concurrent requests (limited to avoid WAF triggers)
+            with ThreadPoolExecutor(max_workers=5) as executor:
                 futures = {}
                 for path in self.wordlist:
                     url = urljoin(base_url, path)
@@ -209,6 +210,8 @@ class APIDiscoverer:
         Returns None for dead endpoints (404, connection errors).
         """
         try:
+            # Small delay to avoid triggering WAF/rate-limits on target
+            time.sleep(0.2)
             resp = self.session.get(url, timeout=self.timeout, allow_redirects=False)
 
             # Consider valid responses: anything that isn't 404 or connection failure

@@ -10,6 +10,7 @@ Generates comprehensive kill-list reports with:
 
 import json
 import os
+import re
 from datetime import datetime, timezone
 from urllib.parse import urlparse
 from rich.console import Console
@@ -185,7 +186,9 @@ class KillReportGenerator:
             path = ep.get("path", "")
             if path and path not in paths_blocked:
                 lines.append(f"# Block: {ep.get('risk', 'Dangerous endpoint')}")
-                lines.append(f"location ~* ^{path} {{")
+                # Escape regex special chars in path for nginx location block
+                escaped_path = re.escape(path)
+                lines.append(f"location ~* ^{escaped_path} {{")
                 lines.append("    deny all;")
                 lines.append("    return 403;")
                 lines.append("}")

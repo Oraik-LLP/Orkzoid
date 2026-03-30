@@ -138,8 +138,9 @@ class APIAuditor:
 
         console.print(
             Panel(
-                f"[bold cyan]🔒 Auditing {len(probe_endpoints)} endpoint(s) for security issues[/bold cyan]\n"
-                f"[dim]Checks: TLS, Auth, Rate-Limiting, Data Exposure[/dim]",
+                f"[bold cyan]Auditing {len(probe_endpoints)} endpoint(s) for security issues[/bold cyan]\n"
+                f"[dim]Checks: TLS, Auth, Rate-Limiting, Data Exposure[/dim]\n"
+                f"[dim yellow]Note: TLS cert verification is disabled for scanning (verify=False)[/dim yellow]",
                 title="[bold red]Security Audit[/bold red]",
                 border_style="red",
             )

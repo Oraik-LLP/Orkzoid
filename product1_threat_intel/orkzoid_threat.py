@@ -14,6 +14,7 @@ Usage:
 import argparse
 import sys
 import os
+import importlib
 
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -74,12 +75,38 @@ Examples:
         default=5,
         help="Network operation timeout in seconds (default: 5)",
     )
+    parser.add_argument(
+        "--api-key",
+        default=None,
+        help="NVD API key for faster CVE lookups (free at https://nvd.nist.gov/developers/request-an-api-key)",
+    )
 
     return parser.parse_args()
 
 
+def check_dependencies():
+    """Check that required packages are installed."""
+    required = {
+        "nmap": "python-nmap",
+        "rich": "rich",
+        "requests": "requests",
+        "colorama": "colorama",
+    }
+    missing = []
+    for module, pip_name in required.items():
+        try:
+            importlib.import_module(module)
+        except ImportError:
+            missing.append(pip_name)
+    if missing:
+        print(f"\n[!] Missing dependencies: {', '.join(missing)}")
+        print(f"    Run: pip install -r requirements.txt\n")
+        sys.exit(1)
+
+
 def main():
     """Main execution flow for Orkzoid Threat Intelligence."""
+    check_dependencies()
     args = parse_args()
 
     # Display banner
@@ -115,7 +142,7 @@ def main():
 
     # ─── Phase 2: CVE Correlation ─────────────────────────────────────
     console.rule("[bold magenta]Phase 2: CVE Correlation[/bold magenta]")
-    correlator = CVECorrelator(timeout=args.timeout)
+    correlator = CVECorrelator(timeout=args.timeout, api_key=args.api_key)
     cve_results = correlator.correlate(services)
 
     # ─── Phase 3: Attack Scoring ──────────────────────────────────────
