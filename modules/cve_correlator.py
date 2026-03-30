@@ -33,7 +33,7 @@ class CVECorrelator:
         self.timeout = timeout
         self.session = requests.Session()
         self.session.headers.update({
-            "User-Agent": "Oraik-ThreatIntel/1.0",
+            "User-Agent": "Orkzoid-ThreatIntel/1.0",
             "Accept": "application/json",
         })
         self.cve_results = []

@@ -42,7 +42,7 @@ class ReconScanner:
             Panel(
                 f"[bold cyan]🔍 Scanning target:[/bold cyan] [white]{target}[/white]\n"
                 f"[dim]Timeout: {self.timeout}s | Detection: Service + Version[/dim]",
-                title="[bold green]Oraik Recon[/bold green]",
+                title="[bold green]Orkzoid Recon[/bold green]",
                 border_style="green",
             )
         )

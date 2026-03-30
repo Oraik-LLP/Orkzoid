@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-oraik_threat.py — Oraik Proactive Threat Intelligence & Automated Incident Response
+orkzoid_threat.py — Orkzoid Proactive Threat Intelligence & Automated Incident Response
 =====================================================================================
 Main entry point for Product 1.
 
@@ -8,7 +8,7 @@ Scans targets for open ports/services, correlates with NVD CVEs,
 scores attack vectors, and generates remediation playbooks.
 
 Usage:
-    python oraik_threat.py --target <IP or CIDR> [--output report.md] [--timeout 5]
+    python orkzoid_threat.py --target <IP or CIDR> [--output report.md] [--timeout 5]
 """
 
 import argparse
@@ -48,14 +48,14 @@ BANNER = r"""
 def parse_args() -> argparse.Namespace:
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(
-        prog="oraik_threat",
-        description="Oraik Threat Intelligence — Scan targets, correlate CVEs, generate remediation playbooks.",
+        prog="orkzoid_threat",
+        description="Orkzoid Threat Intelligence — Scan targets, correlate CVEs, generate remediation playbooks.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python oraik_threat.py --target 192.168.1.1
-  python oraik_threat.py --target 10.0.0.0/24 --timeout 10
-  python oraik_threat.py --target 192.168.1.1 --output my_report
+  python orkzoid_threat.py --target 192.168.1.1
+  python orkzoid_threat.py --target 10.0.0.0/24 --timeout 10
+  python orkzoid_threat.py --target 192.168.1.1 --output my_report
         """,
     )
     parser.add_argument(
@@ -79,7 +79,7 @@ Examples:
 
 
 def main():
-    """Main execution flow for Oraik Threat Intelligence."""
+    """Main execution flow for Orkzoid Threat Intelligence."""
     args = parse_args()
 
     # Display banner
@@ -144,7 +144,7 @@ def main():
             f"[bold white]Reports:[/bold white]\n"
             f"  📄 Markdown: [cyan]{md_path}[/cyan]\n"
             f"  📊 JSON:     [cyan]{json_path}[/cyan]",
-            title="[bold bright_cyan]Oraik Threat Intelligence — Complete[/bold bright_cyan]",
+            title="[bold bright_cyan]Orkzoid Threat Intelligence — Complete[/bold bright_cyan]",
             border_style="bright_green",
             padding=(1, 2),
         )

@@ -1,8 +1,8 @@
-# 🛡️ Oraik — Autonomous Security Platform
+# 🛡️ Orkzoid — Autonomous Security Platform
 
 > **Proactive Threat Intelligence & Shadow API Attack Surface Management**
 
-Oraik is a Python-based autonomous security platform consisting of two products designed for offensive security professionals, bug bounty hunters, and DevSecOps teams.
+Orkzoid is a Python-based autonomous security platform consisting of two products designed for offensive security professionals, bug bounty hunters, and DevSecOps teams.
 
 ---
 
@@ -13,7 +13,7 @@ Oraik is a Python-based autonomous security platform consisting of two products 
 Scans targets for open ports, correlates discovered services with known CVEs from NVD, scores attack vectors by severity, and generates remediation playbooks.
 
 ```bash
-python product1_threat_intel/oraik_threat.py --target 192.168.1.0/24 --output report.md
+python product1_threat_intel/orkzoid_threat.py --target 192.168.1.0/24 --output report.md
 ```
 
 **Features:**
@@ -31,7 +31,7 @@ python product1_threat_intel/oraik_threat.py --target 192.168.1.0/24 --output re
 Discovers undocumented API endpoints, audits them for security misconfigurations, diffs against OpenAPI specs, and generates firewall kill-lists.
 
 ```bash
-python product2_shadow_api/oraik_api.py --target example.com --spec openapi.json --output report.md
+python product2_shadow_api/orkzoid_api.py --target example.com --spec openapi.json --output report.md
 ```
 
 **Features:**
@@ -62,7 +62,7 @@ python product2_shadow_api/oraik_api.py --target example.com --spec openapi.json
 
 ```bash
 # Clone or navigate to the project
-cd Oraik
+cd Orkzoid
 
 # Install dependencies
 pip install -r requirements.txt
@@ -76,26 +76,26 @@ pip install -r requirements.txt
 
 ```bash
 # Scan a single IP
-python product1_threat_intel/oraik_threat.py --target 10.0.0.1
+python product1_threat_intel/orkzoid_threat.py --target 10.0.0.1
 
 # Scan a CIDR range with custom timeout
-python product1_threat_intel/oraik_threat.py --target 192.168.1.0/24 --timeout 10
+python product1_threat_intel/orkzoid_threat.py --target 192.168.1.0/24 --timeout 10
 
 # Save output to a specific file
-python product1_threat_intel/oraik_threat.py --target 10.0.0.1 --output my_report.md
+python product1_threat_intel/orkzoid_threat.py --target 10.0.0.1 --output my_report.md
 ```
 
 ### Product 2 — Shadow API Scanner
 
 ```bash
 # Discover and audit APIs on a domain
-python product2_shadow_api/oraik_api.py --target example.com
+python product2_shadow_api/orkzoid_api.py --target example.com
 
 # Compare against OpenAPI spec
-python product2_shadow_api/oraik_api.py --target example.com --spec openapi.json
+python product2_shadow_api/orkzoid_api.py --target example.com --spec openapi.json
 
 # Custom wordlist and timeout
-python product2_shadow_api/oraik_api.py --target example.com --timeout 3 --output api_report.md
+python product2_shadow_api/orkzoid_api.py --target example.com --timeout 3 --output api_report.md
 ```
 
 ### Common Flags
@@ -112,11 +112,11 @@ python product2_shadow_api/oraik_api.py --target example.com --timeout 3 --outpu
 ## 📁 Project Structure
 
 ```
-Oraik/
+Orkzoid/
 ├── README.md
 ├── requirements.txt
 ├── product1_threat_intel/
-│   ├── oraik_threat.py       # Main entry point
+│   ├── orkzoid_threat.py       # Main entry point
 │   ├── modules/
 │   │   ├── recon.py          # nmap scanning, service detection
 │   │   ├── cve_correlator.py # Fetch CVEs from NVD API, match to services
@@ -124,7 +124,7 @@ Oraik/
 │   │   └── playbook.py       # Generate remediation playbooks per finding
 │   └── reports/              # Auto-generated JSON + Markdown reports
 └── product2_shadow_api/
-    ├── oraik_api.py          # Main entry point
+    ├── orkzoid_api.py          # Main entry point
     ├── modules/
     │   ├── discoverer.py     # Crawl JS bundles, Wayback, wordlist brute-force
     │   ├── auditor.py        # Check auth, TLS, rate-limiting, data exposure
@@ -152,7 +152,7 @@ Oraik/
 
 ## ⚠️ Legal Disclaimer
 
-**Oraik is intended for authorized security testing only.** Always obtain proper authorization before scanning any target. Unauthorized scanning of networks and APIs may violate local, state, and federal laws. The authors are not responsible for misuse of this tool.
+**Orkzoid is intended for authorized security testing only.** Always obtain proper authorization before scanning any target. Unauthorized scanning of networks and APIs may violate local, state, and federal laws. The authors are not responsible for misuse of this tool.
 
 ---
 

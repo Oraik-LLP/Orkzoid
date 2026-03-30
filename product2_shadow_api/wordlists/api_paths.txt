@@ -1,5 +1,5 @@
 # ============================================================
-# Oraik — Common API Path Wordlist
+# Orkzoid — Common API Path Wordlist
 # ============================================================
 # 250+ common API paths for endpoint discovery.
 # Used by the Shadow API Scanner for brute-force enumeration.

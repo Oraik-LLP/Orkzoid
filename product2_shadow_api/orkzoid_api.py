@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-oraik_api.py — Oraik Shadow API Attack Surface Management
+orkzoid_api.py — Orkzoid Shadow API Attack Surface Management
 ==========================================================
 Main entry point for Product 2.
 
@@ -8,7 +8,7 @@ Discovers undocumented API endpoints, audits for security issues,
 diffs against OpenAPI specs, and generates kill-list reports.
 
 Usage:
-    python oraik_api.py --target <domain> [--spec openapi.json] [--output report.md] [--timeout 5]
+    python orkzoid_api.py --target <domain> [--spec openapi.json] [--output report.md] [--timeout 5]
 """
 
 import argparse
@@ -52,14 +52,14 @@ BANNER = r"""
 def parse_args() -> argparse.Namespace:
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(
-        prog="oraik_api",
-        description="Oraik Shadow API Scanner — Discover, audit, and report undocumented APIs.",
+        prog="orkzoid_api",
+        description="Orkzoid Shadow API Scanner — Discover, audit, and report undocumented APIs.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python oraik_api.py --target example.com
-  python oraik_api.py --target example.com --spec openapi.json
-  python oraik_api.py --target example.com --timeout 3 --output api_report
+  python orkzoid_api.py --target example.com
+  python orkzoid_api.py --target example.com --spec openapi.json
+  python orkzoid_api.py --target example.com --timeout 3 --output api_report
         """,
     )
     parser.add_argument(
@@ -88,7 +88,7 @@ Examples:
 
 
 def main():
-    """Main execution flow for Oraik Shadow API Scanner."""
+    """Main execution flow for Orkzoid Shadow API Scanner."""
     args = parse_args()
 
     # Display banner
@@ -163,7 +163,7 @@ def main():
             f"[bold white]Reports:[/bold white]\n"
             f"  📄 Markdown: [cyan]{md_path}[/cyan]\n"
             f"  📊 JSON:     [cyan]{json_path}[/cyan]",
-            title="[bold bright_cyan]Oraik Shadow API Scanner — Complete[/bold bright_cyan]",
+            title="[bold bright_cyan]Orkzoid Shadow API Scanner — Complete[/bold bright_cyan]",
             border_style="bright_green",
             padding=(1, 2),
         )
