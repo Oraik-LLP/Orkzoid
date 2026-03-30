@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Reports (auto-generated, keep directory but ignore contents)
+product1_threat_intel/reports/*.md
+product1_threat_intel/reports/*.json
+product2_shadow_api/reports/*.md
+product2_shadow_api/reports/*.json
