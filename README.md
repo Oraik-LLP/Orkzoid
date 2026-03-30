@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="orkzoid.png" alt="Orkzoid" width="200">
+</p>
+
 # Orkzoid — Autonomous Security Platform
 
 > **Proactive Threat Intelligence & Shadow API Attack Surface Management**
