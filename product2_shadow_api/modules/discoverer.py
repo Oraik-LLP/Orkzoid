@@ -6,11 +6,17 @@ Discovers API endpoints through multiple techniques:
   - HTML/JS bundle crawling (regex for fetch/axios/XHR calls)
   - Wayback Machine CDX API (historical URL discovery)
   - DNS subdomain enumeration
+  - Deep JS route extraction (framework-specific patterns, source maps, webpack chunks)
+
+WAF Evasion:
+  - Rotates User-Agent headers per request (Chrome/Safari/Firefox/Edge)
+  - Injects random delays between requests to avoid rate-limit bans
 """
 
 import re
 import os
 import time
+import random
 import requests
 from urllib.parse import urljoin, urlparse
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -23,6 +29,8 @@ from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TimeElapsedColumn
 from rich.table import Table
 from rich.panel import Panel
+
+from modules.waf_evasion import create_evasion_session, random_delay, get_random_user_agent
 
 console = Console()
 
@@ -59,20 +67,54 @@ SUBDOMAIN_WORDLIST = [
 ]
 
 
+# ─── Deep JS Route Extraction Patterns ───────────────────────────
+# Framework-specific patterns to extract API routes from JS bundles
+DEEP_JS_ROUTE_PATTERNS = [
+    # React Router / Next.js route definitions
+    r"""path\s*:\s*['"`](\/[^'"`\s]{2,})['"`]""",
+    # Vue Router route definitions
+    r"""(?:path|redirect)\s*:\s*['"`](\/[^'"`\s]{2,})['"`]""",
+    # Express-style route handlers
+    r"""(?:router|app)\.(?:get|post|put|patch|delete|all)\s*\(\s*['"`](\/[^'"`\s]{2,})['"`]""",
+    # Angular HttpClient
+    r"""(?:http|this\.http)\.(?:get|post|put|delete|patch)\s*[<(]\s*['"`]([^'"`\s]{2,})['"`]""",
+    # Template literal URLs with base path
+    r"""\$\{[^}]*\}(\/api\/[^`\s]{2,})""",
+    r"""\$\{[^}]*\}(\/v\d+\/[^`\s]{2,})""",
+    # Webpack chunk/module references pointing to API paths
+    r"""__webpack_require__\s*\(\s*['"]([^'"]+\/api[^'"]*)['"]\)""",
+    # Generic URL path assignment patterns
+    r"""(?:url|endpoint|baseUrl|apiUrl|API_URL|BASE_URL|apiBase|baseAPI)\s*[:=]\s*['"`]([^'"`\s]{2,})['"`]""",
+    # String concatenation building API paths
+    r"""['"`](\/[a-zA-Z0-9_\-]+(?:\/[a-zA-Z0-9_\-:]+){2,})['"`]""",
+    # GraphQL operation names and endpoints
+    r"""(?:mutation|query|subscription)\s+([A-Z][a-zA-Z]+)""",
+    # API gateway / proxy routes
+    r"""(?:proxy|gateway|redirect)\s*[:=]\s*['"`]([^'"`\s]+)['"`]""",
+]
+
+# File extensions to deep-crawl for route info
+JS_CRAWL_EXTENSIONS = (
+    ".js", ".mjs", ".cjs", ".jsx", ".ts", ".tsx",
+    ".js.map", ".chunk.js", ".bundle.js",
+)
+
+
 class APIDiscoverer:
     """
     Discovers API endpoints on a target domain using
     multiple discovery techniques.
+
+    WAF Evasion:
+      - Uses rotating User-Agent headers (Chrome, Safari, Firefox, Edge)
+      - Adds random delays between requests to avoid rate-limit bans
     """
 
     def __init__(self, timeout: int = 5, wordlist_path: str | None = None):
         self.timeout = timeout
-        self.session = requests.Session()
-        self.session.headers.update({
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-                          "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            "Accept": "text/html,application/json,*/*",
-        })
+
+        # Use evasion-aware session with rotating User-Agent
+        self.session = create_evasion_session()
         self.discovered_endpoints = []
         self.subdomains = []
 
@@ -137,7 +179,8 @@ class APIDiscoverer:
         console.print(
             Panel(
                 f"[bold cyan]🔍 Discovering API endpoints on:[/bold cyan] [white]{target}[/white]\n"
-                f"[dim]Timeout: {self.timeout}s | Wordlist: {len(self.wordlist)} paths[/dim]",
+                f"[dim]Timeout: {self.timeout}s | Wordlist: {len(self.wordlist)} paths[/dim]\n"
+                f"[dim green]🛡 WAF Evasion: User-Agent rotation + random delays active[/dim green]",
                 title="[bold green]API Discovery[/bold green]",
                 border_style="green",
             )
@@ -158,6 +201,10 @@ class APIDiscoverer:
         # ─── Technique 4: DNS Subdomain Enumeration ──────────────────
         console.rule("[dim]Technique 4: DNS Subdomain Enumeration[/dim]")
         self._dns_enumeration(target)
+
+        # ─── Technique 5: Deep JS Route Extraction ───────────────────
+        console.rule("[dim]Technique 5: Deep JS Route Extraction (beyond wordlist)[/dim]")
+        self._deep_js_route_extraction(base_url)
 
         # Deduplicate results
         self._deduplicate()
@@ -210,8 +257,8 @@ class APIDiscoverer:
         Returns None for dead endpoints (404, connection errors).
         """
         try:
-            # Small delay to avoid triggering WAF/rate-limits on target
-            time.sleep(0.2)
+            # Random delay to avoid triggering WAF/rate-limits on target
+            random_delay(min_seconds=0.3, max_seconds=1.2)
             resp = self.session.get(url, timeout=self.timeout, allow_redirects=False)
 
             # Consider valid responses: anything that isn't 404 or connection failure
@@ -273,6 +320,8 @@ class APIDiscoverer:
 
                 for js_url in js_urls:
                     try:
+                        # Random delay between JS fetches to avoid WAF triggers
+                        random_delay(min_seconds=0.2, max_seconds=0.8)
                         js_resp = self.session.get(js_url, timeout=self.timeout)
                         if js_resp.status_code == 200:
                             endpoints = self._extract_endpoints_from_text(js_resp.text, base_url)
@@ -454,6 +503,234 @@ class APIDiscoverer:
 
         console.print(f"[green]✓ DNS enumeration found {found} subdomain(s)[/green]")
 
+    # ─── Technique 5: Deep JS Route Extraction ────────────────────
+    def _deep_js_route_extraction(self, base_url: str):
+        """
+        Go beyond the wordlist: dynamically crawl the site's JavaScript
+        files to extract hidden API routes that aren't in standard
+        dictionaries.
+
+        This technique:
+          1. Fetches the main page and extracts ALL linked JS resources
+          2. Follows webpack chunk manifests and source maps
+          3. Applies framework-specific regex (React Router, Vue Router,
+             Express, Angular) to extract route definitions
+          4. Mines generic path-like strings for undocumented endpoints
+          5. Optionally probes discovered routes to verify they're live
+        """
+        found = 0
+        js_urls_to_scan = set()
+        seen_js = set()
+
+        try:
+            # Step 1: Fetch main page and collect all JS/asset URLs
+            random_delay(min_seconds=0.3, max_seconds=1.0)
+            resp = self.session.get(base_url, timeout=self.timeout)
+            if resp.status_code != 200:
+                console.print(f"[yellow]⚠ Main page returned {resp.status_code}, skipping deep JS extraction[/yellow]")
+                return
+
+            soup = BeautifulSoup(resp.text, "lxml")
+
+            # Collect <script src="..."> tags
+            for tag in soup.find_all("script", src=True):
+                js_url = urljoin(base_url, tag["src"])
+                js_urls_to_scan.add(js_url)
+
+            # Collect <link href="...js"> (preloads, modulepreloads)
+            for link in soup.find_all("link", href=True):
+                href = link["href"]
+                if any(href.endswith(ext) for ext in JS_CRAWL_EXTENSIONS):
+                    js_urls_to_scan.add(urljoin(base_url, href))
+
+            # Look for webpack chunk manifest patterns in inline scripts
+            for script in soup.find_all("script", src=False):
+                if script.string:
+                    # Extract dynamically-imported chunk URLs
+                    chunk_pattern = r"""['"`]([^'"`]*(?:chunk|bundle|vendor|main|app)[^'"`]*\.(?:js|mjs))['"`]"""
+                    chunks = re.findall(chunk_pattern, script.string, re.IGNORECASE)
+                    for chunk_path in chunks:
+                        if chunk_path.startswith(("http://", "https://")):
+                            js_urls_to_scan.add(chunk_path)
+                        else:
+                            js_urls_to_scan.add(urljoin(base_url, chunk_path))
+
+            console.print(f"[dim]Collected {len(js_urls_to_scan)} JS resource(s) for deep analysis[/dim]")
+
+            if not js_urls_to_scan:
+                console.print("[yellow]⚠ No JS files found for deep route extraction.[/yellow]")
+                return
+
+            # Step 2: Download and deeply analyze each JS file
+            extracted_routes = set()
+
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                BarColumn(),
+                TimeElapsedColumn(),
+                console=console,
+            ) as progress:
+                task = progress.add_task(
+                    "[cyan]Deep-scanning JS for hidden routes...",
+                    total=len(js_urls_to_scan),
+                )
+
+                for js_url in js_urls_to_scan:
+                    if js_url in seen_js:
+                        progress.update(task, advance=1)
+                        continue
+                    seen_js.add(js_url)
+
+                    try:
+                        random_delay(min_seconds=0.3, max_seconds=1.0)
+                        js_resp = self.session.get(js_url, timeout=self.timeout)
+
+                        if js_resp.status_code == 200:
+                            js_text = js_resp.text
+
+                            # Apply deep extraction patterns
+                            routes = self._extract_deep_routes(js_text)
+                            extracted_routes.update(routes)
+
+                            # Check for source map reference and follow it
+                            sourcemap_url = self._find_sourcemap_url(js_text, js_url)
+                            if sourcemap_url and sourcemap_url not in seen_js:
+                                seen_js.add(sourcemap_url)
+                                try:
+                                    random_delay(min_seconds=0.2, max_seconds=0.7)
+                                    map_resp = self.session.get(sourcemap_url, timeout=self.timeout)
+                                    if map_resp.status_code == 200:
+                                        map_routes = self._extract_deep_routes(map_resp.text)
+                                        extracted_routes.update(map_routes)
+                                        progress.update(
+                                            task,
+                                            description=f"[yellow]📦 Source map: +{len(map_routes)} routes",
+                                        )
+                                except requests.RequestException:
+                                    pass
+
+                            # Look for additional chunk URLs referenced in this JS
+                            more_chunks = re.findall(
+                                r"""['"`]([./]*(?:static|assets|chunks?|js)/[^'"`\s]+\.(?:js|mjs))['"`]""",
+                                js_text,
+                            )
+                            for chunk_path in more_chunks[:20]:  # Limit to avoid rabbit holes
+                                chunk_url = urljoin(js_url, chunk_path)
+                                if chunk_url not in seen_js:
+                                    js_urls_to_scan.add(chunk_url)
+
+                    except requests.RequestException:
+                        pass
+
+                    progress.update(task, advance=1)
+
+            # Step 3: Filter and add discovered routes as endpoints
+            already_known = {ep["path"].lower().rstrip("/") for ep in self.discovered_endpoints}
+
+            for route in extracted_routes:
+                route_normalized = route.lower().rstrip("/")
+                if route_normalized in already_known:
+                    continue
+
+                # Build full URL
+                if route.startswith(("http://", "https://")):
+                    url = route
+                else:
+                    url = urljoin(base_url, route)
+
+                endpoint = {
+                    "url": url,
+                    "path": route,
+                    "status_code": None,
+                    "content_type": "unknown",
+                    "content_length": 0,
+                    "discovery_method": "deep_js",
+                    "headers": {},
+                    "response_snippet": "",
+                }
+                self.discovered_endpoints.append(endpoint)
+                already_known.add(route_normalized)
+                found += 1
+
+            # Step 4: Optionally probe the newly discovered routes
+            if found > 0:
+                console.print(f"[dim]Probing {found} newly extracted route(s)...[/dim]")
+                deep_endpoints = [
+                    ep for ep in self.discovered_endpoints
+                    if ep["discovery_method"] == "deep_js" and ep["status_code"] is None
+                ]
+                probed = 0
+                for ep in deep_endpoints[:50]:  # Limit probing to top 50
+                    probe_result = self._probe_url(ep["url"])
+                    if probe_result:
+                        ep.update(probe_result)
+                        ep["discovery_method"] = "deep_js"  # Preserve method
+                        probed += 1
+                console.print(f"[dim]  {probed}/{len(deep_endpoints)} routes responded[/dim]")
+
+        except requests.RequestException as e:
+            console.print(f"[yellow]⚠ Deep JS extraction failed: {e}[/yellow]")
+
+        console.print(f"[green]✓ Deep JS route extraction found {found} hidden route(s)[/green]")
+
+    def _extract_deep_routes(self, text: str) -> set[str]:
+        """
+        Apply all deep JS route patterns to extract API paths from
+        JavaScript source text.
+        """
+        routes = set()
+
+        for pattern in DEEP_JS_ROUTE_PATTERNS:
+            try:
+                matches = re.findall(pattern, text, re.IGNORECASE)
+                for match in matches:
+                    path = match[-1] if isinstance(match, tuple) else match
+                    path = path.strip()
+
+                    # Validate: must look like a real path
+                    if not path or len(path) < 2 or len(path) > 200:
+                        continue
+
+                    # Skip obvious non-paths (JS variables, CSS, etc.)
+                    if any(x in path for x in [
+                        ".css", ".png", ".jpg", ".svg", ".gif", ".ico",
+                        ".woff", ".ttf", ".eot",
+                        "node_modules", "webpack", "__proto__",
+                        "function", "return", "const ", "var ",
+                    ]):
+                        continue
+
+                    # Must start with / or be a full URL
+                    if path.startswith("/"):
+                        routes.add(path)
+                    elif path.startswith(("http://", "https://")):
+                        parsed = urlparse(path)
+                        if parsed.path and len(parsed.path) > 1:
+                            routes.add(parsed.path)
+
+            except re.error:
+                continue
+
+        return routes
+
+    def _find_sourcemap_url(self, js_text: str, js_url: str) -> str | None:
+        """
+        Look for a sourceMappingURL comment in JS content and resolve
+        it to an absolute URL.
+        """
+        # //# sourceMappingURL=filename.js.map
+        match = re.search(r"//[#@]\s*sourceMappingURL\s*=\s*(\S+)", js_text)
+        if match:
+            map_ref = match.group(1)
+            if map_ref.startswith(("http://", "https://")):
+                return map_ref
+            elif map_ref.startswith("data:"):
+                return None  # Inline source map, skip
+            else:
+                return urljoin(js_url, map_ref)
+        return None
+
     def _deduplicate(self):
         """Remove duplicate endpoints based on URL."""
         seen = set()
@@ -488,6 +765,7 @@ class APIDiscoverer:
             "js_crawl": "yellow",
             "wayback": "blue",
             "dns": "magenta",
+            "deep_js": "bright_red",
         }
 
         for idx, ep in enumerate(self.discovered_endpoints[:100], 1):  # Show top 100

@@ -6,6 +6,10 @@ Audits discovered API endpoints for common security issues:
   - Authentication requirements (401/403 vs 200 on unauthenticated requests)
   - Rate limiting (X-RateLimit, Retry-After headers)
   - Sensitive data exposure (emails, API keys, tokens, PII patterns)
+
+WAF Evasion:
+  - Rotates User-Agent headers per request (Chrome/Safari/Firefox/Edge)
+  - Injects random delays between requests to avoid rate-limit bans
 """
 
 import re
@@ -16,6 +20,8 @@ from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TimeElapsedColumn
 from rich.table import Table
 from rich.panel import Panel
+
+from modules.waf_evasion import create_evasion_session, random_delay
 
 console = Console()
 
@@ -106,11 +112,9 @@ class APIAuditor:
 
     def __init__(self, timeout: int = 5):
         self.timeout = timeout
-        self.session = requests.Session()
-        self.session.headers.update({
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-                          "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        })
+
+        # Use evasion-aware session with rotating User-Agent
+        self.session = create_evasion_session()
         self.audit_results = []
 
     def audit(self, endpoints: list[dict]) -> list[dict]:
@@ -140,7 +144,8 @@ class APIAuditor:
             Panel(
                 f"[bold cyan]Auditing {len(probe_endpoints)} endpoint(s) for security issues[/bold cyan]\n"
                 f"[dim]Checks: TLS, Auth, Rate-Limiting, Data Exposure[/dim]\n"
-                f"[dim yellow]Note: TLS cert verification is disabled for scanning (verify=False)[/dim yellow]",
+                f"[dim yellow]Note: TLS cert verification is disabled for scanning (verify=False)[/dim yellow]\n"
+                f"[dim green]🛡 WAF Evasion: User-Agent rotation + random delays active[/dim green]",
                 title="[bold red]Security Audit[/bold red]",
                 border_style="red",
             )
@@ -199,6 +204,9 @@ class APIAuditor:
         }
 
         try:
+            # Random delay to avoid triggering WAF/rate-limits
+            random_delay(min_seconds=0.3, max_seconds=1.0)
+
             # Make an unauthenticated GET request
             resp = self.session.get(url, timeout=self.timeout, allow_redirects=True, verify=False)
             result["status_code"] = resp.status_code
